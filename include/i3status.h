@@ -424,6 +424,15 @@ typedef struct {
 
 void print_volume(volume_ctx_t *ctx);
 
+typedef struct {
+    yajl_gen json_gen;
+    char *buf;
+    const size_t buflen;
+    const char *fmt;
+} keyboard_ctx_t;
+
+void print_keyboard(keyboard_ctx_t *ctx);
+
 bool process_runs(const char *path);
 int volume_pulseaudio(uint32_t sink_idx, const char *sink_name);
 bool description_pulseaudio(uint32_t sink_idx, const char *sink_name, char buffer[MAX_SINK_DESCRIPTION_LEN]);

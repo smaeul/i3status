@@ -146,6 +146,7 @@ m_dep = cc.find_library('m', required: false)
 rt_dep = cc.find_library('rt', required: false)
 
 confuse_dep = dependency('libconfuse', method: 'pkg-config')
+x11_dep = dependency('x11', method: 'pkg-config')
 yajl_dep = dependency('yajl', method: 'pkg-config')
 
 i3status_srcs = [
@@ -163,6 +164,7 @@ i3status_srcs = [
   'src/print_eth_info.c',
   'src/print_ip_addr.c',
   'src/print_ipv6_addr.c',
+  'src/print_keyboard.c',
   'src/print_load.c',
   'src/print_mem.c',
   'src/print_path_exists.c',
@@ -181,6 +183,7 @@ i3status_deps = [
   m_dep,
   rt_dep,
   confuse_dep,
+  x11_dep,
   yajl_dep,
   config_h,
 ]
