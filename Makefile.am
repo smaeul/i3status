@@ -30,6 +30,7 @@ AM_CPPFLAGS = \
 i3status_CFLAGS = \
 	$(AM_CFLAGS) \
 	$(CONFUSE_CFLAGS) \
+	$(X11_CFLAGS) \
 	$(YAJL_CFLAGS) \
 	$(PULSE_CFLAGS) \
 	$(NLGENL_CFLAGS) \
@@ -42,6 +43,7 @@ i3status_CPPFLAGS = \
 
 i3status_LDADD = \
 	$(CONFUSE_LIBS) \
+	$(X11_LIBS) \
 	$(YAJL_LIBS) \
 	$(PULSE_LIBS) \
 	$(NLGENL_LIBS) \
@@ -65,6 +67,7 @@ i3status_SOURCES = \
 	src/print_eth_info.c \
 	src/print_ip_addr.c \
 	src/print_ipv6_addr.c \
+	src/print_keyboard.c \
 	src/print_load.c \
 	src/print_mem.c \
 	src/print_path_exists.c \

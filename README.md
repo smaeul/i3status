@@ -19,10 +19,11 @@ i3status has the following dependencies:
   * autoconf (compile-time only dependency)
   * asciidoc (only for the documentation)
   * libpulse-dev (for getting the current volume using PulseAudio)
+  * libx11-dev (for getting the current keyboard layout)
 
 On debian-based systems, the following line will install all requirements:
 ```bash
-apt-get install autoconf libconfuse-dev libyajl-dev libasound2-dev libiw-dev asciidoc libpulse-dev libnl-genl-3-dev
+apt-get install autoconf libconfuse-dev libyajl-dev libasound2-dev libiw-dev asciidoc libpulse-dev libnl-genl-3-dev libx11-dev
 ```
 
 ## Upstream

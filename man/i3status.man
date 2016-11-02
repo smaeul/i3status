@@ -56,6 +56,7 @@ order += "ethernet eth0"
 order += "battery 0"
 order += "cpu_temperature 0"
 order += "memory"
+order += "keyboard"
 order += "load"
 order += "tztime local"
 order += "tztime berlin"
@@ -103,6 +104,10 @@ tztime local {
 tztime berlin {
         format = "%Y-%m-%d %H:%M:%S %Z"
         timezone = "Europe/Berlin"
+}
+
+keyboard {
+	format = "⌨: %map"
 }
 
 load {
@@ -523,6 +528,15 @@ format when above +max_threshold+ can be customized with
 *Example max_threshold*: +"0.1"+
 
 *Example format_above_threshold*: +Warning: %1min %5min %15min+
+
+=== Keyboard
+
+Gets the current active keyboard layout for the X server. It will also get the
+variant.
+
+*Example order*: +keyboard+
+
+*Example format*: +⌨: %map+
 
 === Time
 
