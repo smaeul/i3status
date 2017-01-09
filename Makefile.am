@@ -30,6 +30,7 @@ AM_CPPFLAGS = \
 i3status_CFLAGS = \
 	$(AM_CFLAGS) \
 	$(CONFUSE_CFLAGS) \
+	$(MPDCLIENT_CFLAGS) \
 	$(X11_CFLAGS) \
 	$(YAJL_CFLAGS) \
 	$(PULSE_CFLAGS) \
@@ -43,6 +44,7 @@ i3status_CPPFLAGS = \
 
 i3status_LDADD = \
 	$(CONFUSE_LIBS) \
+	$(MPDCLIENT_LIBS) \
 	$(X11_LIBS) \
 	$(YAJL_LIBS) \
 	$(PULSE_LIBS) \
@@ -70,6 +72,7 @@ i3status_SOURCES = \
 	src/print_keyboard.c \
 	src/print_load.c \
 	src/print_mem.c \
+	src/print_mpd.c \
 	src/print_path_exists.c \
 	src/print_run_watch.c \
 	src/print_time.c \

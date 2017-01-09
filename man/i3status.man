@@ -674,6 +674,30 @@ can't be read "error read" will be printed.
 
 *Example Max_characters*: 255
 
+=== MPD
+
+Outputs the current song played on mpd. If the connection to the mpd
+server fails, format_down and color_bad is used. If there is no
+current song, then format_down and color_degraded is used. If there is
+a current song, format is used, color_degraded if paused,
+color_good if playing. (Note: you can override color_bad, color_good,
+color_degraded per section)
+
+*Example order*: +mpd+
+
+*Example format_up*: +%path %title %artist %album %date %track %albart %comment %composer %genre+
+
+*Example configuration*:
+-------------------------------------------------------------
+mpd {
+    format = "%title - %album - %artist"
+    format_down = "not playing"
+    host = "127.0.0.1"
+    port = 6600
+    password = "secretpassword"
+}
+-------------------------------------------------------------
+
 == Universal module options
 
 When using the i3bar output format, there are a few additional options that
