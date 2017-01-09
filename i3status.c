@@ -57,7 +57,7 @@
 /* socket file descriptor for general purposes */
 int general_socket;
 
-static bool exit_upon_signal = false;
+sig_atomic_t exit_upon_signal = false;
 static bool run_once = false;
 
 cfg_t *cfg, *cfg_general, *cfg_section;
@@ -83,11 +83,11 @@ void fatalsig(int signum) {
 }
 
 /*
- * Do nothing upon SIGUSR1. Running this signal handler will nevertheless
+ * Do nothing upon SIGPIPE or SIGUSR1. Running this signal handler will nevertheless
  * interrupt nanosleep() so that i3status immediately generates new output.
  *
  */
-void sigusr1(int signum) {
+void ignoresig(int signum) {
 }
 
 /*
@@ -498,17 +498,12 @@ int main(int argc, char *argv[]) {
     memset(&action, 0, sizeof(struct sigaction));
     action.sa_handler = fatalsig;
     main_thread = pthread_self();
-
-    /* Exit upon SIGPIPE because when we have nowhere to write to, gathering system
-     * information is pointless. Also exit explicitly on SIGTERM and SIGINT because
-     * only this will trigger a reset of the cursor in the terminal output-format.
-     */
-    sigaction(SIGPIPE, &action, NULL);
     sigaction(SIGTERM, &action, NULL);
     sigaction(SIGINT, &action, NULL);
 
     memset(&action, 0, sizeof(struct sigaction));
-    action.sa_handler = sigusr1;
+    action.sa_handler = ignoresig;
+    sigaction(SIGPIPE, &action, NULL);
     sigaction(SIGUSR1, &action, NULL);
 
     if (setlocale(LC_ALL, "") == NULL)
@@ -808,6 +803,10 @@ int main(int argc, char *argv[]) {
 
         printf("\n");
         fflush(stdout);
+        if (ferror(stdout)) {
+            fprintf(stderr, "Exiting due to error on stdout.\n");
+            exit(1);
+        }
 
         if (run_once) {
             break;
