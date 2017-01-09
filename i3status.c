@@ -455,6 +455,19 @@ int main(int argc, char *argv[]) {
         CFG_CUSTOM_SEP_BLOCK_WIDTH_OPT,
         CFG_END()};
 
+    cfg_opt_t mpd_opts[] = {
+        CFG_STR("format", "%title", CFGF_NONE),
+        CFG_STR("format_down", "not playing", CFGF_NONE),
+        CFG_STR("host", NULL, CFGF_NONE),
+        CFG_INT("port", 0, CFGF_NONE),
+        CFG_STR("password", "", CFGF_NONE),
+        CFG_CUSTOM_ALIGN_OPT,
+        CFG_CUSTOM_COLOR_OPTS,
+        CFG_CUSTOM_MIN_WIDTH_OPT,
+        CFG_CUSTOM_SEPARATOR_OPT,
+        CFG_CUSTOM_SEP_BLOCK_WIDTH_OPT,
+        CFG_END()};
+
     cfg_opt_t opts[] = {
         CFG_STR_LIST("order", "{}", CFGF_NONE),
         CFG_SEC("general", general_opts, CFGF_NONE),
@@ -474,6 +487,7 @@ int main(int argc, char *argv[]) {
         CFG_SEC("memory", memory_opts, CFGF_NONE),
         CFG_SEC("cpu_usage", usage_opts, CFGF_NONE),
         CFG_SEC("read_file", read_opts, CFGF_TITLE | CFGF_MULTI),
+        CFG_SEC("mpd", mpd_opts, CFGF_NONE),
         CFG_END()};
 
     char *configfile = NULL;
@@ -940,6 +954,22 @@ int main(int argc, char *argv[]) {
                     .max_chars = cfg_getint(sec, "max_characters"),
                 };
                 print_file_contents(&ctx);
+                SEC_CLOSE_MAP;
+            }
+
+            CASE_SEC("mpd") {
+                SEC_OPEN_MAP("mpd");
+                mpd_ctx_t ctx = {
+                    .json_gen = json_gen,
+                    .buf = buffer,
+                    .buflen = sizeof(buffer),
+                    .format = cfg_getstr(sec, "format"),
+                    .format_down = cfg_getstr(sec, "format_down"),
+                    .host = cfg_getstr(sec, "host"),
+                    .port = cfg_getint(sec, "port"),
+                    .password = cfg_getstr(sec, "password"),
+                };
+                print_mpd(&ctx);
                 SEC_CLOSE_MAP;
             }
         }

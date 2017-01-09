@@ -146,6 +146,7 @@ m_dep = cc.find_library('m', required: false)
 rt_dep = cc.find_library('rt', required: false)
 
 confuse_dep = dependency('libconfuse', method: 'pkg-config')
+libmpdclient_dep = dependency('libmpdclient', method: 'pkg-config')
 yajl_dep = dependency('yajl', method: 'pkg-config')
 
 i3status_srcs = [
@@ -165,6 +166,7 @@ i3status_srcs = [
   'src/print_ipv6_addr.c',
   'src/print_load.c',
   'src/print_mem.c',
+  'src/print_mpd.c',
   'src/print_path_exists.c',
   'src/print_run_watch.c',
   'src/print_time.c',
@@ -181,6 +183,7 @@ i3status_deps = [
   m_dep,
   rt_dep,
   confuse_dep,
+  libmpdclient_dep,
   yajl_dep,
   config_h,
 ]
