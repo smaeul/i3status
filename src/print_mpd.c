@@ -5,6 +5,9 @@
  *
  */
 
+#include <errno.h>
+#include <pthread.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,11 +19,17 @@
 
 #include "i3status.h"
 
-static struct mpd_connection *conn = NULL;
+static char buf[1024];
+static const char *buf_color = "color_bad";
+static pthread_mutex_t buf_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static mpd_ctx_t thread_ctx;
+static pthread_t thread_id;
+static bool thread_started;
 
 #define MPDTAG(name, type) \
     { #name, sizeof(#name) - 1, MPD_TAG_##type }
-static struct {
+static const struct {
     const char *name;
     int len;
     int type;
@@ -39,83 +48,107 @@ static struct {
     MPDTAG(disc, DISC)};
 #undef MPDTAG
 
-static bool mpd_initialize(const char *host, int port, const char *password) {
-    if (conn) {
-        /* Ensure an existing connection is still valid. */
-        if (mpd_connection_get_error(conn) == MPD_ERROR_SUCCESS ||
-            mpd_connection_clear_error(conn))
-            return true;
-        /* Otherwise, start over with a new one. */
-        mpd_connection_free(conn);
-    }
-    if (!(conn = mpd_connection_new(host, port, 0)))
-        return false;
+static void *mpd_thread(void *arg) {
+    const mpd_ctx_t *ctx = &thread_ctx;
+    struct mpd_connection *conn;
+
+    if (!(conn = mpd_connection_new(ctx->host, ctx->port, 0)))
+        goto err;
     if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS &&
         !mpd_connection_clear_error(conn))
-        goto err;
-    if (password && *password && !mpd_send_password(conn, password))
-        goto err;
-    return true;
+        goto err_free;
+    if (ctx->password && *ctx->password &&
+        !mpd_send_password(conn, ctx->password))
+        goto err_free;
 
-err:
+    do {
+        pthread_mutex_lock(&buf_mutex);
+
+        struct mpd_song *song = mpd_run_current_song(conn);
+        if (song) {
+            struct mpd_status *status = mpd_run_status(conn);
+            char *outwalk = buf;
+            const char *fmtwalk;
+
+            if (status && mpd_status_get_state(status) == MPD_STATE_PLAY)
+                buf_color = "color_good";
+            else
+                buf_color = "color_degraded";
+
+            if (status)
+                mpd_status_free(status);
+
+            fmtwalk = ctx->format;
+            while (*fmtwalk) {
+                if (*fmtwalk == '%') {
+                    fmtwalk += 1;
+                    if (*fmtwalk == '%') {
+                        *outwalk = '%';
+                        fmtwalk += 1;
+                        outwalk += 1;
+                    } else {
+                        for (size_t i = 0; i < sizeof(mpd_tags) / sizeof(*mpd_tags); i += 1) {
+                            if (!strncmp(fmtwalk, mpd_tags[i].name, mpd_tags[i].len)) {
+                                const char *tag = mpd_song_get_tag(song, mpd_tags[i].type, 0);
+                                fmtwalk += mpd_tags[i].len;
+                                outwalk = stpcpy(outwalk, tag ? tag : "Unknown");
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    *outwalk = *fmtwalk;
+                    fmtwalk += 1;
+                    outwalk += 1;
+                }
+            }
+
+            mpd_song_free(song);
+        } else {
+            strcpy(buf, ctx->format_down);
+            buf_color = "color_degraded";
+        }
+
+        pthread_mutex_unlock(&buf_mutex);
+        pthread_kill(main_thread, SIGUSR1);
+
+        mpd_run_idle_mask(conn, MPD_IDLE_PLAYER);
+    } while (mpd_connection_get_error(conn) == MPD_ERROR_SUCCESS ||
+             mpd_connection_clear_error(conn));
+
+err_free:
     mpd_connection_free(conn);
-    conn = NULL;
-    return false;
+err:
+    pthread_mutex_lock(&buf_mutex);
+    strcpy(buf, ctx->format_down);
+    buf_color = "color_bad";
+    pthread_mutex_unlock(&buf_mutex);
+    pthread_kill(main_thread, SIGUSR1);
+
+    return NULL;
 }
 
 void print_mpd(mpd_ctx_t *ctx) {
-    const char *fmtwalk;
     char *outwalk = ctx->buf;
-    struct mpd_song *song;
-    struct mpd_status *status;
+    int ret;
 
-    if (!mpd_initialize(ctx->host, ctx->port, ctx->password)) {
-        START_COLOR("color_bad");
-        outwalk += sprintf(outwalk, "%s", ctx->format_down);
-        goto end;
+    if (thread_started) {
+        ret = pthread_tryjoin_np(thread_id, NULL);
+        if (ret != EBUSY)
+            thread_started = false;
     }
 
-    if (!(song = mpd_run_current_song(conn))) {
-        START_COLOR("color_degraded");
-        outwalk += sprintf(outwalk, "%s", ctx->format_down);
-        goto end;
+    if (!thread_started) {
+        memcpy(&thread_ctx, ctx, sizeof(thread_ctx));
+        ret = pthread_create(&thread_id, NULL, mpd_thread, NULL);
+        if (ret == 0)
+            thread_started = true;
     }
 
-    if ((status = mpd_run_status(conn)) && mpd_status_get_state(status) == MPD_STATE_PLAY)
-        START_COLOR("color_good");
-    else
-        START_COLOR("color_degraded");
-    if (status)
-        mpd_status_free(status);
-
-    fmtwalk = ctx->format;
-    while (*fmtwalk) {
-        if (*fmtwalk == '%') {
-            fmtwalk += 1;
-            if (*fmtwalk == '%') {
-                *outwalk = '%';
-                fmtwalk += 1;
-                outwalk += 1;
-            } else {
-                for (size_t i = 0; i < sizeof(mpd_tags) / sizeof(*mpd_tags); i += 1) {
-                    if (!strncmp(fmtwalk, mpd_tags[i].name, mpd_tags[i].len)) {
-                        const char *tag = mpd_song_get_tag(song, mpd_tags[i].type, 0);
-                        fmtwalk += mpd_tags[i].len;
-                        outwalk = stpcpy(outwalk, tag ? tag : "Unknown");
-                        break;
-                    }
-                }
-            }
-        } else {
-            *outwalk = *fmtwalk;
-            fmtwalk += 1;
-            outwalk += 1;
-        }
-    }
-
-    mpd_song_free(song);
-
-end:
+    pthread_mutex_lock(&buf_mutex);
+    START_COLOR(buf_color);
+    outwalk += sprintf(outwalk, "%s", buf);
+    pthread_mutex_unlock(&buf_mutex);
     END_COLOR;
     OUTPUT_FULL_TEXT(ctx->buf);
 }
